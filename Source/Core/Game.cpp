@@ -45,7 +45,7 @@ int Game::Run(const char* title, int width, int height, bool fullscreen)
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
 		UpdateScene(timestep);
-		Renderer::RenderScene();
+		Renderer::Render(timestep);
 
 		//if (gResources.mShaderPrograms["shadow"].Reload()) {
 		//	Renderer::Init();
@@ -168,9 +168,12 @@ void Game::processSDLEvent(SDL_Event& event)
 
 void Game::loadResources() {
 	LoadShaderProgram("default", "Resources/Shaders/default.vert", "Resources/Shaders/default.frag");
+	LoadShaderProgram("wind", "Resources/Shaders/wind.vert", "Resources/Shaders/wind.frag");
 	LoadShaderProgram("shadow", "Resources/Shaders/shadowMapping.vert", "Resources/Shaders/shadowMapping.frag");
-	LoadShaderProgram("depth", "Resources/Shaders/shadowMappingDepth.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
+	LoadShaderProgram("shadowDepth", "Resources/Shaders/shadowMappingDepth.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
 	
+	LoadMesh("Resources/Meshes/Shotgun.fbx", "gun");
+	LoadMesh("Resources/Meshes/Rock/Rock.obj", "rock");
 	LoadMesh("Resources/Meshes/Maria/Maria J J Ong.dae", "maria");
 	LoadMesh("Resources/Meshes/suzanne.obj", "suzanne");
 	LoadMesh("Resources/Meshes/cube.obj", "cube");

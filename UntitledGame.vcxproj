@@ -158,6 +158,7 @@
     <ClInclude Include="Source\Input\InputManager.h" />
     <ClInclude Include="Source\Log\Logger.h" />
     <ClInclude Include="Source\Rendering\Buffers.h" />
+    <ClInclude Include="Source\Rendering\Material.h" />
     <ClInclude Include="Source\Rendering\Mesh.h" />
     <ClInclude Include="Source\Rendering\Renderer.h" />
     <ClInclude Include="Source\Rendering\Shader.h" />
@@ -166,6 +167,10 @@
     <ClInclude Include="Source\Scene\CameraController.h" />
     <ClInclude Include="Source\Scene\GameObject.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\wind.frag" />
+    <None Include="Resources\Shaders\wind.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

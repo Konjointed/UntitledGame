@@ -22,6 +22,9 @@ Step 5: Apply the shader associated with the object
 #include <vector>
 
 #include "Core/Math.h"
+#include "Scene/Scene.h"
+
+struct ShaderProgram;
 
 enum Resolution {
 	LOW = 512,
@@ -31,10 +34,9 @@ enum Resolution {
 	EXTREME = 8192
 };
 
-// TODO: Make lightdir to the scene (and any other/future data)
 struct RendererData {
-	const glm::vec3 mLightDirection = glm::normalize(glm::vec3(20.0f, 50, 20.0f));
-	const unsigned int mDepthMapResolution = Resolution::HIGH;
+	const glm::vec3 mLightDirection = gScene.lightDirection;
+	const unsigned int mDepthMapResolution = Resolution::ULTRA;
 	unsigned int mLightFrameBuffer;
 	unsigned int mLightDepthMaps;
 	unsigned int mMatricesUniformBuffer;
@@ -44,8 +46,9 @@ struct RendererData {
 class Renderer {
 public:
 	static void Init();
-	static void RenderScene();
+	static void Render(float timestep);
 private:
+	static void renderScene(ShaderProgram program);
 	static void shadowPass();
 	static void lightingPass();
 };
@@ -58,3 +61,26 @@ std::vector<glm::mat4> getLightSpaceMatrices();
 extern RendererData renderData;
 
 #endif 
+
+
+/*
+Up until now I've been using super basic shaders or things I've learned from learnopengl.com and I'd like to combine everything, but I don't fully understand how.
+I thought it was as simple as apply X shader and set uniforms, apply Y shader and set uniforms, etc and you're good to go, but that doesn't seem to be the case.
+
+void Renderer::Render() {
+	shadowPass();
+	lightingPass();
+}
+
+void Renderer::shadowPass() {
+	// Uniform buffer setup
+	// Render depth of scene
+	// Render scene
+}
+
+void Renderer::lightingPass() {
+	// Render scene with generated depth map
+	// Set uniforms
+	// Render scene
+}
+*/
