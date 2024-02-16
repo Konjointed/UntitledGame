@@ -97,22 +97,15 @@ void Renderer::Init()
 	////-----------------------------------------------------------------------------
 	//// Shader configuration
 	////-----------------------------------------------------------------------------
-	ShaderProgram& program = gResources.mShaderPrograms.at("shadow");
+	ShaderProgram& program = gResources.mShaderPrograms.at("wind");
 	glUseProgram(program.mId);
 	program.SetUniformInt("diffuseTexture", 0);
 	program.SetUniformInt("shadowMap", 1);
 }
 
 void Renderer::Render(float timestep) {
-	ShaderProgram& program = gResources.mShaderPrograms.at("wind");
-	glUseProgram(program.mId);
-	program.SetUniform("projection", gScene.camera.get()->GetProjection());
-	program.SetUniform("view", gScene.camera.get()->GetView());
-	program.SetUniformFloat("time", timestep);
-	renderScene(program);
-
 	shadowPass();
-	lightingPass();
+	lightingPass(timestep);
 }
 
 void Renderer::renderScene(ShaderProgram program)
@@ -181,17 +174,20 @@ void Renderer::shadowPass()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::lightingPass()
+void Renderer::lightingPass(float timestep)
 { 
 	//-----------------------------------------------------------------------------
 	// 2. Render scene as normal using the generated depth/shadow map  
 	//-----------------------------------------------------------------------------
 	glViewport(0, 0, 1280, 720);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	ShaderProgram& program = gResources.mShaderPrograms.at("shadow");
+	ShaderProgram& program = gResources.mShaderPrograms.at("wind");
 	glUseProgram(program.mId);
 	program.SetUniform("projection", gScene.camera.get()->GetProjection());
 	program.SetUniform("view", gScene.camera.get()->GetView()); 
+	static float time = 0.0f;
+	time += 0.01f;
+	program.SetUniformFloat("time", time);
 	//-----------------------------------------------------------------------------
 	// Set light uniforms
 	//-----------------------------------------------------------------------------

@@ -168,10 +168,6 @@
     <ClInclude Include="Source\Scene\GameObject.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Shaders\wind.frag" />
-    <None Include="Resources\Shaders\wind.vert" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -167,10 +167,11 @@ void Game::processSDLEvent(SDL_Event& event)
 }
 
 void Game::loadResources() {
-	LoadShaderProgram("default", "Resources/Shaders/default.vert", "Resources/Shaders/default.frag");
-	LoadShaderProgram("wind", "Resources/Shaders/wind.vert", "Resources/Shaders/wind.frag");
-	LoadShaderProgram("shadow", "Resources/Shaders/shadowMapping.vert", "Resources/Shaders/shadowMapping.frag");
+	LoadShaderProgram("shadow", "Resources/Shaders/CSMPhong.vert", "Resources/Shaders/CSMPhong.frag");
 	LoadShaderProgram("shadowDepth", "Resources/Shaders/shadowMappingDepth.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
+
+	LoadShaderProgram("wind", "Resources/Shaders/Wind.vert", "Resources/Shaders/CSMPhong.frag");
+	LoadShaderProgram("shadowDepthWind", "Resources/Shaders/ShadowDepthWind.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
 	
 	LoadMesh("Resources/Meshes/Shotgun.fbx", "gun");
 	LoadMesh("Resources/Meshes/Rock/Rock.obj", "rock");
@@ -181,3 +182,11 @@ void Game::loadResources() {
 	LoadTexture("Resources/Textures/wood.png", "wood");
 	LoadTexture("Resources/Textures/brickwall.jpg", "brick");
 }
+
+
+
+//LoadShaderProgram("CSMPhong", "Resources/Shaders/CSMPhong.vert", "Resources/Shaders/CSMPhong.frag");
+//LoadShaderProgram("ShadowDepth", "Resources/Shaders/ShadowDepth.vert", "Resources/Shaders/ShadowDepth.frag", "Resources/Shaders/ShadowDepth.geom");
+//
+//LoadShaderProgram("CSMPhongWind", "Resources/Shaders/CSMPhongWind.vert", "Resources/Shaders/CSMPhong.frag");
+//LoadShaderProgram("ShadowDepthWind", "Resources/Shaders/ShadowDepthWind.vert", "Resources/Shaders/ShadowDepth.frag", "Resources/Shaders/ShadowDepth.geom");

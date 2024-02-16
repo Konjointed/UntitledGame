@@ -26,7 +26,7 @@ Step 5: Apply the shader associated with the object
 
 struct ShaderProgram;
 
-enum Resolution {
+enum DepthResolution {
 	LOW = 512,
 	MEDIUM = 1024,
 	HIGH = 2048,
@@ -36,7 +36,7 @@ enum Resolution {
 
 struct RendererData {
 	const glm::vec3 mLightDirection = gScene.lightDirection;
-	const unsigned int mDepthMapResolution = Resolution::ULTRA;
+	const unsigned int mDepthMapResolution = DepthResolution::ULTRA;
 	unsigned int mLightFrameBuffer;
 	unsigned int mLightDepthMaps;
 	unsigned int mMatricesUniformBuffer;
@@ -50,7 +50,7 @@ public:
 private:
 	static void renderScene(ShaderProgram program);
 	static void shadowPass();
-	static void lightingPass();
+	static void lightingPass(float timestep);
 };
 
 std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview);
