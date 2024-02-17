@@ -169,9 +169,10 @@ void Game::processSDLEvent(SDL_Event& event)
 void Game::loadResources() {
 	LoadShaderProgram("shadow", "Resources/Shaders/CSMPhong.vert", "Resources/Shaders/CSMPhong.frag");
 	LoadShaderProgram("shadowDepth", "Resources/Shaders/shadowMappingDepth.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
+	LoadShaderProgram("screen", "Resources/Shaders/screen.vert", "Resources/Shaders/screen.frag");
 
-	LoadShaderProgram("wind", "Resources/Shaders/Wind.vert", "Resources/Shaders/CSMPhong.frag");
-	LoadShaderProgram("shadowDepthWind", "Resources/Shaders/ShadowDepthWind.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
+	//LoadShaderProgram("wind", "Resources/Shaders/Wind.vert", "Resources/Shaders/CSMPhong.frag");
+	//LoadShaderProgram("shadowDepthWind", "Resources/Shaders/ShadowDepthWind.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
 	
 	LoadMesh("Resources/Meshes/Shotgun.fbx", "gun");
 	LoadMesh("Resources/Meshes/Rock/Rock.obj", "rock");

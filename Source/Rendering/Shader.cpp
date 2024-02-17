@@ -3,6 +3,8 @@
 #include <sstream>
 #include <fstream>
 
+#include <stb_include.h>
+
 #include "Log/Logger.h"
 #include "Core/Resources.h"
 
@@ -54,26 +56,41 @@ Shader ShaderProgram::Compile(GLenum type, const std::string filepath)
 	result.mType = type;
 	result.mFilepath = filepath;
 
-	// Load file content 
-	//std::string shaderSource;
-	//try
-	//{
-	//	std::ifstream shaderFile(filepath);
-	//	std::stringstream shaderStream;
-	//	shaderStream << shaderFile.rdbuf();
-	//	shaderFile.close();
-	//	shaderSource = shaderStream.str();
-	//}
-	//catch (std::exception e)
-	//{
-	//	spdlog::error("SHADER::COMPILESHADER: Failed to read shader files");
-	//}
-
-	std::string shaderSource = PreprocessShaderSource(filepath);
-	if (shaderSource.empty()) {
-		spdlog::error("SHADER::COMPILESHADER: Failed to preprocess shader files");
-		return result;
+	// Load file content
+	std::string shaderSource;
+	try {
+		std::ifstream shaderFile(filepath);
+		std::stringstream shaderStream;
+		shaderStream << shaderFile.rdbuf();
+		shaderFile.close();
+		shaderSource = shaderStream.str();
 	}
+	catch (std::exception& e) {
+		spdlog::error("SHADER::COMPILESHADER: Failed to read shader files: {}", e.what());
+		return result; // Early return on failure
+	}
+
+	// Creating modifiable copies
+	char* modifiableShaderSource = new char[shaderSource.length() + 1];
+	std::strcpy(modifiableShaderSource, shaderSource.c_str());
+
+	char* modifiableFilepath = new char[filepath.length() + 1];
+	std::strcpy(modifiableFilepath, filepath.c_str());
+
+	// Use stb_include to process #include directives
+	char* includedShader = stb_include_string(modifiableShaderSource, nullptr, modifiableFilepath, nullptr, nullptr);
+
+	// Free the dynamically allocated memory for modifiable copies
+	delete[] modifiableShaderSource;
+	delete[] modifiableFilepath;
+
+	if (!includedShader) {
+		spdlog::error("SHADER::COMPILESHADER: Failed to process shader includes");
+		return result; // Early return on failure
+	}
+
+	shaderSource = std::string(includedShader);
+	free(includedShader); // Free the memory allocated by stb_include_string
 
 	// Create shader and compile it
 	result.mId = glCreateShader(type);

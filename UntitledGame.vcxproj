@@ -107,7 +107,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -169,14 +169,19 @@
     <ClInclude Include="Source\Scene\Scene.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\Common.vert" />
+    <None Include="Resources\Shaders\DeferredLighting.frag" />
+    <None Include="Resources\Shaders\GBuffer.frag" />
+    <None Include="Resources\Shaders\GBuffer.vert" />
+    <None Include="Resources\Shaders\screen.frag" />
+    <None Include="Resources\Shaders\screen.vert" />
+    <None Include="Resources\Shaders\temp\Common.vert" />
     <None Include="Resources\Shaders\CSMPhong.frag" />
     <None Include="Resources\Shaders\CSMPhong.vert" />
-    <None Include="Resources\Shaders\ShadowDepthWind.vert" />
+    <None Include="Resources\Shaders\temp\ShadowDepthWind.vert" />
     <None Include="Resources\Shaders\shadowMappingDepth.frag" />
     <None Include="Resources\Shaders\shadowMappingDepth.geom" />
     <None Include="Resources\Shaders\shadowMappingDepth.vert" />
-    <None Include="Resources\Shaders\Wind.vert" />
+    <None Include="Resources\Shaders\temp\Wind.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

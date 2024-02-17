@@ -50,6 +50,25 @@ void Renderer::Init()
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//-----------------------------------------------------------------------------
+	// Configure post-processing frame buffer
+	//-----------------------------------------------------------------------------
+	glGenFramebuffers(1, &renderData.ppFrameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, renderData.ppFrameBuffer);
+
+	// Create a color attachment texture
+	glGenTextures(1, &renderData.ppTextureColor);
+	glBindTexture(GL_TEXTURE_2D, renderData.ppTextureColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1280, 720, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); // Adjust size as needed
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.ppTextureColor, 0);
+
+	// Check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		spdlog::error("Post-processing Framebuffer is not complete!");
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	////-----------------------------------------------------------------------------
 	//// Configure uniform buffer
 	////-----------------------------------------------------------------------------
@@ -62,7 +81,21 @@ void Renderer::Init()
 
 void Renderer::Render(float timestep) {
 	shadowPass();
-	lightingPass(timestep);
+	lightingPass();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	ShaderProgram& program = gResources.mShaderPrograms.at("screen");
+	glUseProgram(program.mId);
+
+	unsigned int sceneTexture = /* ID of your scene texture */;
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, sceneTexture);
+	program.SetUniformInt("sceneTexture", 0);
+
+	renderScreenQuad();
 }
 
 void Renderer::shadowPass()
@@ -99,7 +132,7 @@ void Renderer::shadowPass()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::lightingPass(float timestep)
+void Renderer::lightingPass()
 { 
 	//-----------------------------------------------------------------------------
 	// 2. Render scene as normal using the generated depth/shadow map  
@@ -159,6 +192,35 @@ void Renderer::renderScene(ShaderProgram program)
 			glBindVertexArray(0);
 		}
 	}
+}
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderScreenQuad() {
+	if (quadVAO == 0)
+	{
+		float quadVertices[] = {
+			// positions        // texture Coords
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+		// setup plane VAO
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	}
+	glBindVertexArray(quadVAO);
+	glDisable(GL_DEPTH_TEST);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
 }
 
 std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)

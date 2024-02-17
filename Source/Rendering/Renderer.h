@@ -41,6 +41,10 @@ struct RendererData {
 	unsigned int mLightDepthMaps;
 	unsigned int mMatricesUniformBuffer;
 	std::vector<float> mShadowCascadeLevels;
+
+	// Post-processing framebuffer and textures
+	unsigned int ppFrameBuffer; // Post-processing Framebuffer
+	unsigned int ppTextureColor; // Texture attachment for color
 };
 
 class Renderer {
@@ -50,9 +54,10 @@ public:
 private:
 	static void renderScene(ShaderProgram program);
 	static void shadowPass();
-	static void lightingPass(float timestep);
+	static void lightingPass();
 };
 
+void renderScreenQuad();
 std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview);
 std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
 glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane);
