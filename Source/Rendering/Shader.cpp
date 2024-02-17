@@ -6,6 +6,42 @@
 #include "Log/Logger.h"
 #include "Core/Resources.h"
 
+std::string PreprocessShaderSource(const std::string& sourcePath) {
+	std::ifstream shaderFile(sourcePath);
+	if (!shaderFile.is_open()) {
+		spdlog::error("Failed to open shader file: {}", sourcePath);
+		return "";
+	}
+
+	std::string line;
+	std::stringstream processedShader;
+	while (getline(shaderFile, line)) {
+		if (line.substr(0, 8) == "#include") {
+			// Extract the filepath from the include directive
+			size_t firstQuote = line.find("\"");
+			size_t lastQuote = line.rfind("\"");
+			if (firstQuote == std::string::npos || lastQuote == std::string::npos || firstQuote == lastQuote) {
+				spdlog::error("Invalid include directive format in shader: {}", sourcePath);
+				continue;
+			}
+
+			std::string includePath = line.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+			// Optionally, handle relative paths here
+			std::string includeContent = PreprocessShaderSource(includePath);
+			if (includeContent.empty()) {
+				spdlog::error("Failed to process include file: {}", includePath);
+				continue;
+			}
+			processedShader << includeContent << '\n';
+		}
+		else {
+			processedShader << line << '\n';
+		}
+	}
+
+	return processedShader.str();
+}
+
 void ShaderProgram::AddShader(GLenum type, const std::string filepath)
 {
 	Shader shader = Compile(type, filepath);
@@ -19,18 +55,24 @@ Shader ShaderProgram::Compile(GLenum type, const std::string filepath)
 	result.mFilepath = filepath;
 
 	// Load file content 
-	std::string shaderSource;
-	try
-	{
-		std::ifstream shaderFile(filepath);
-		std::stringstream shaderStream;
-		shaderStream << shaderFile.rdbuf();
-		shaderFile.close();
-		shaderSource = shaderStream.str();
-	}
-	catch (std::exception e)
-	{
-		spdlog::error("SHADER::COMPILESHADER: Failed to read shader files");
+	//std::string shaderSource;
+	//try
+	//{
+	//	std::ifstream shaderFile(filepath);
+	//	std::stringstream shaderStream;
+	//	shaderStream << shaderFile.rdbuf();
+	//	shaderFile.close();
+	//	shaderSource = shaderStream.str();
+	//}
+	//catch (std::exception e)
+	//{
+	//	spdlog::error("SHADER::COMPILESHADER: Failed to read shader files");
+	//}
+
+	std::string shaderSource = PreprocessShaderSource(filepath);
+	if (shaderSource.empty()) {
+		spdlog::error("SHADER::COMPILESHADER: Failed to preprocess shader files");
+		return result;
 	}
 
 	// Create shader and compile it

@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>.\Bin</OutDir>
-    <IncludePath>D:\Github\UntitledGame\Source;D:\Github\UntitledGame\ThirdParty\SDL2;D:\Github\UntitledGame\ThirdParty;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Github\UntitledGame\Resources;D:\Github\UntitledGame\Source;D:\Github\UntitledGame\ThirdParty\SDL2;D:\Github\UntitledGame\ThirdParty;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Github\UntitledGame\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -167,6 +167,16 @@
     <ClInclude Include="Source\Scene\CameraController.h" />
     <ClInclude Include="Source\Scene\GameObject.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\Common.vert" />
+    <None Include="Resources\Shaders\CSMPhong.frag" />
+    <None Include="Resources\Shaders\CSMPhong.vert" />
+    <None Include="Resources\Shaders\ShadowDepthWind.vert" />
+    <None Include="Resources\Shaders\shadowMappingDepth.frag" />
+    <None Include="Resources\Shaders\shadowMappingDepth.geom" />
+    <None Include="Resources\Shaders\shadowMappingDepth.vert" />
+    <None Include="Resources\Shaders\Wind.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -9,45 +9,9 @@
 #include "Rendering/Texture.h"
 #include "Scene/Scene.h"
 
-//void Render() {
-//	shadowPass();
-//	lightingPass();
-//}
-//
-//void shadowPass() {
-//	// depth buffer stuff
-//	// ...
-//
-//
-//}
-//
-//lightingPass() {
-//	// lighting stuff
-//	// ...
-//
-//
-//}
-
-
-//void RenderPass() {
-//	// Bind the shadow shader
-//	// Set uniforms
-//	// ...
-//
-//	// Render scene objects
-//	for (Object sceneObj : sceneObjs) {
-//		if sceneObject is static {
-//			// Apply static shader object
-//			// Set uniforms
-//			// ...
-//		}
-//		else if sceneObject is dynamic{
-//			// Apply dynamic shader object
-//			// Set uniforms
-//			// ...
-//		}
-//	}
-//}
+//static float time = 0.0f;
+//time += 0.01f;
+//program.SetUniformFloat("time", time);
 
 // TODO: Create a file with util/helper functions to make he buffers n shit
 void Renderer::Init()
@@ -94,50 +58,11 @@ void Renderer::Init()
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4x4) * 16, nullptr, GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, renderData.mMatricesUniformBuffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	////-----------------------------------------------------------------------------
-	//// Shader configuration
-	////-----------------------------------------------------------------------------
-	ShaderProgram& program = gResources.mShaderPrograms.at("wind");
-	glUseProgram(program.mId);
-	program.SetUniformInt("diffuseTexture", 0);
-	program.SetUniformInt("shadowMap", 1);
 }
 
 void Renderer::Render(float timestep) {
 	shadowPass();
 	lightingPass(timestep);
-}
-
-void Renderer::renderScene(ShaderProgram program)
-{
-	for (auto& object : gScene.objects) {
-		glm::vec3 position = object->GetPosition();
-		glm::vec3 rotation = object->GetRotation();
-		glm::vec3 scale = object->GetScale();
-
-		glm::mat4 model = glm::translate(glm::mat4(1.0f), position) *
-			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), glm::vec3(1, 0, 0)) *
-			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), glm::vec3(0, 1, 0)) *
-			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0, 0, 1)) *
-			glm::scale(glm::mat4(1.0f), scale);
-
-		program.SetUniform("model", model);
-
-		// Bind texture
-		if (!object->GetTexture().empty()) {
-			Texture texture = gResources.mTextures.at(object->GetTexture());
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture.mId);
-		}
-
-		// Bind mesh
-		if (!object->GetMesh().empty()) {
-			Mesh mesh = gResources.mMeshes.at(object->GetMesh());
-			glBindVertexArray(mesh.vao);
-			glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
-		}
-	}
 }
 
 void Renderer::shadowPass()
@@ -181,13 +106,12 @@ void Renderer::lightingPass(float timestep)
 	//-----------------------------------------------------------------------------
 	glViewport(0, 0, 1280, 720);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	ShaderProgram& program = gResources.mShaderPrograms.at("wind");
+	ShaderProgram& program = gResources.mShaderPrograms.at("shadow");
 	glUseProgram(program.mId);
 	program.SetUniform("projection", gScene.camera.get()->GetProjection());
 	program.SetUniform("view", gScene.camera.get()->GetView()); 
-	static float time = 0.0f;
-	time += 0.01f;
-	program.SetUniformFloat("time", time);
+	program.SetUniformInt("diffuseTexture", 0);
+	program.SetUniformInt("shadowMap", 1);
 	//-----------------------------------------------------------------------------
 	// Set light uniforms
 	//-----------------------------------------------------------------------------
@@ -201,8 +125,40 @@ void Renderer::lightingPass(float timestep)
 	}
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
-	
+
 	renderScene(program);
+}
+
+void Renderer::renderScene(ShaderProgram program)
+{
+	for (auto& object : gScene.objects) {
+		glm::vec3 position = object->GetPosition();
+		glm::vec3 rotation = object->GetRotation();
+		glm::vec3 scale = object->GetScale();
+
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), position) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), glm::vec3(1, 0, 0)) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), glm::vec3(0, 1, 0)) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0, 0, 1)) *
+			glm::scale(glm::mat4(1.0f), scale);
+
+		program.SetUniform("model", model);
+
+		// Bind texture
+		if (!object->GetTexture().empty()) {
+			Texture texture = gResources.mTextures.at(object->GetTexture());
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture.mId);
+		}
+
+		// Bind mesh
+		if (!object->GetMesh().empty()) {
+			Mesh mesh = gResources.mMeshes.at(object->GetMesh());
+			glBindVertexArray(mesh.vao);
+			glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+	}
 }
 
 std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)

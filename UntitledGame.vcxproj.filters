@@ -111,4 +111,14 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\Common.vert" />
+    <None Include="Resources\Shaders\Wind.vert" />
+    <None Include="Resources\Shaders\CSMPhong.frag" />
+    <None Include="Resources\Shaders\CSMPhong.vert" />
+    <None Include="Resources\Shaders\ShadowDepthWind.vert" />
+    <None Include="Resources\Shaders\shadowMappingDepth.frag" />
+    <None Include="Resources\Shaders\shadowMappingDepth.geom" />
+    <None Include="Resources\Shaders\shadowMappingDepth.vert" />
+  </ItemGroup>
 </Project>
