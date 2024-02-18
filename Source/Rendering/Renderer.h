@@ -45,6 +45,7 @@ struct RendererData {
 	// Post-processing framebuffer and textures
 	unsigned int ppFrameBuffer; // Post-processing Framebuffer
 	unsigned int ppTextureColor; // Texture attachment for color
+	unsigned int ppRenderBufferDepth;
 };
 
 class Renderer {

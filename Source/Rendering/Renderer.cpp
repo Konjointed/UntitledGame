@@ -7,6 +7,7 @@
 #include "Rendering/Mesh.h"
 #include "Rendering/Shader.h"
 #include "Rendering/Texture.h"
+#include "Rendering/Buffers.h"
 #include "Scene/Scene.h"
 
 //static float time = 0.0f;
@@ -20,55 +21,28 @@ void Renderer::Init()
 	////-----------------------------------------------------------------------------
 	//// Configure light frame buffer
 	////-----------------------------------------------------------------------------
-	glGenFramebuffers(1, &renderData.mLightFrameBuffer);
+	renderData.mLightFrameBuffer = CreateFrameBuffer(true);
 
-	glGenTextures(1, &renderData.mLightDepthMaps);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
-	glTexImage3D(
-		GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32F, 
-		renderData.mDepthMapResolution, renderData.mDepthMapResolution, int(renderData.mShadowCascadeLevels.size()) + 1,
-		0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-	constexpr float bordercolor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, bordercolor);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, renderData.mLightFrameBuffer);
+	renderData.mLightDepthMaps = CreateDepthTextureArray(renderData.mDepthMapResolution, renderData.mDepthMapResolution, renderData.mShadowCascadeLevels.size() + 1);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, renderData.mLightDepthMaps, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
-	int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE)
-	{
-		spdlog::error("RENDERER::INIT: Framebuffer is not complete!");
-		throw 0;
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	ValidateBuffer(renderData.mLightFrameBuffer);
+	UnbindFramebuffer();
 	//-----------------------------------------------------------------------------
 	// Configure post-processing frame buffer
 	//-----------------------------------------------------------------------------
-	glGenFramebuffers(1, &renderData.ppFrameBuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, renderData.ppFrameBuffer);
+	renderData.ppFrameBuffer = CreateFrameBuffer(true);
 
-	// Create a color attachment texture
-	glGenTextures(1, &renderData.ppTextureColor);
-	glBindTexture(GL_TEXTURE_2D, renderData.ppTextureColor);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1280, 720, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); // Adjust size as needed
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.ppTextureColor, 0);
+	renderData.ppTextureColor = CreateTextureAttachment(1280, 720);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.ppTextureColor, 0); // Attach
 
-	// Check if framebuffer is complete
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		spdlog::error("Post-processing Framebuffer is not complete!");
+	renderData.ppRenderBufferDepth = CreateRenderBufferAttachment(1280, 720);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderData.ppRenderBufferDepth); // Attach
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	ValidateBuffer(renderData.ppFrameBuffer);
+	UnbindFramebuffer();
 	////-----------------------------------------------------------------------------
 	//// Configure uniform buffer
 	////-----------------------------------------------------------------------------
@@ -81,21 +55,31 @@ void Renderer::Init()
 
 void Renderer::Render(float timestep) {
 	shadowPass();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, renderData.ppFrameBuffer);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	lightingPass();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+	// Bind the default framebuffer and draw the screen quad with post-processing
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	ShaderProgram& program = gResources.mShaderPrograms.at("screen");
-	glUseProgram(program.mId);
+	// Use the post-processing shader
+	ShaderProgram& ppShader = gResources.mShaderPrograms.at("screen");
+	glUseProgram(ppShader.mId);
+	ppShader.SetUniformInt("screenTexture", 0);
 
-	unsigned int sceneTexture = /* ID of your scene texture */;
+	// Bind the texture of the offscreen framebuffer
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, sceneTexture);
-	program.SetUniformInt("sceneTexture", 0);
+	glBindTexture(GL_TEXTURE_2D, renderData.ppTextureColor);
 
+	// Render the quad
 	renderScreenQuad();
+
+	glEnable(GL_DEPTH_TEST);
 }
 
 void Renderer::shadowPass()
