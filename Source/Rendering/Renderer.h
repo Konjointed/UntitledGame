@@ -25,6 +25,7 @@ Step 5: Apply the shader associated with the object
 #include "Scene/Scene.h"
 
 struct ShaderProgram;
+struct WindowResizeEvent;
 
 enum DepthResolution {
 	LOW = 512,
@@ -32,10 +33,6 @@ enum DepthResolution {
 	HIGH = 2048,
 	ULTRA = 4096,
 	EXTREME = 8192
-};
-
-struct WindowResizeEvent {
-	int x, y;
 };
 
 struct RendererData {

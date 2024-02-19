@@ -4,6 +4,7 @@
 #include "Core/Math.h"
 
 class CameraController;
+struct WindowResizeEvent;
 
 class Camera {
 public:
@@ -25,7 +26,9 @@ public:
     glm::vec3 GetPosition() const;
     float GetNearPlane() const;
     float GetFarPlane() const;
+    float GetAspectRatio() const;
 private:
+    void onWindowResize(const WindowResizeEvent& event);
     void updateCameraVectors();
 
     glm::vec3 mPosition;

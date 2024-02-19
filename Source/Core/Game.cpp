@@ -18,6 +18,7 @@
 
 Game gGame;
 Resources gResources;
+EventManager gEventManager;
 InputManager gInputManager;
 Scene gScene;
 RendererData renderData;
@@ -70,6 +71,7 @@ int Game::Run(const char* title, int width, int height, bool fullscreen)
 		ImGui::End();
 
 		ImGui::Begin("Scene Texture Viewer");
+
 		static const char* textureTypes[] = { "Default", "Depth" };
 		static int selectedItem = 0;
 		ImGui::Combo("Texture Type", &selectedItem, textureTypes, IM_ARRAYSIZE(textureTypes));
@@ -86,7 +88,22 @@ int Game::Run(const char* title, int width, int height, bool fullscreen)
 			break;
 		}
 
-		ImVec2 textureSize = ImVec2(1280.0f, 720.0f);
+		float cameraAspectRatio = gScene.camera.get()->GetAspectRatio();
+		ImVec2 availableSize = ImGui::GetContentRegionAvail();
+		float availableAspectRatio = availableSize.x / availableSize.y;
+
+		ImVec2 textureSize;
+		if (availableAspectRatio > cameraAspectRatio) {
+			// If the window is wider than the camera's aspect ratio, fit the height and adjust the width
+			textureSize.y = availableSize.y;
+			textureSize.x = availableSize.y * cameraAspectRatio;
+		}
+		else {
+			// If the window is taller than the camera's aspect ratio, fit the width and adjust the height
+			textureSize.x = availableSize.x;
+			textureSize.y = availableSize.x / cameraAspectRatio;
+		}
+
 		ImVec2 uv0 = ImVec2(0.0f, 1.0f); // Bottom-left
 		ImVec2 uv1 = ImVec2(1.0f, 0.0f); // Top-right
 		ImGui::Image((void*)(intptr_t)textureID, textureSize, uv0, uv1);
@@ -198,6 +215,9 @@ void Game::processSDLEvent(SDL_Event& event)
 				int newHeight = event.window.data2;
 				glViewport(0, 0, newWidth, newHeight);
 				gEventManager.Fire<WindowResizeEvent>(newWidth, newHeight);
+			}
+			else if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
+				m_quit = true;
 			}
 			break;
 		}

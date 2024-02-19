@@ -1,11 +1,15 @@
 #include "Camera.h"
 
+#include "Event/EventManager.h"
 #include "Scene/CameraController.h"
 
 Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane)
     : mFOV(fov), mAspectRatio(aspectRatio), mNearPlane(nearPlane), mFarPlane(farPlane),
     mPosition(0.0f, 0.0f, 3.0f), mForward(0.0f, 0.0f, -1.0f), mUp(0.0f, 1.0f, 0.0f),
-    mYaw(0.0f), mPitch(0.0f) {}
+    mYaw(0.0f), mPitch(0.0f) 
+{
+    gEventManager.Connect<WindowResizeEvent>(this, &Camera::onWindowResize);
+}
 
 void Camera::Update(float timestep)
 {
@@ -66,6 +70,16 @@ float Camera::GetNearPlane() const {
 
 float Camera::GetFarPlane() const {
     return mFarPlane;
+}
+
+float Camera::GetAspectRatio() const
+{
+    return mAspectRatio;
+}
+
+void Camera::onWindowResize(const WindowResizeEvent& event)
+{
+    mAspectRatio = static_cast<float>(event.x) / static_cast<float>(event.y);
 }
 
 void Camera::updateCameraVectors()
