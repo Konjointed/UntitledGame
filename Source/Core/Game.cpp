@@ -1,5 +1,11 @@
 #include "Game.h"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_sdl2.h>
+#include <imgui/imgui_impl_opengl3.h>
+
+#include <stb_image.h>
+
 #include "Log/Logger.h"
 #include "Core/Resources.h"
 #include "Event/EventManager.h"
@@ -35,6 +41,7 @@ int Game::Run(const char* title, int width, int height, bool fullscreen)
 	while (!m_quit) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
+			ImGui_ImplSDL2_ProcessEvent(&event);
 			processSDLEvent(event);
 		}
 
@@ -42,15 +49,63 @@ int Game::Run(const char* title, int width, int height, bool fullscreen)
 		float timestep = time - lastFrameTime;
 		lastFrameTime = time;
 
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-
 		UpdateScene(timestep);
 		Renderer::Render(timestep);
 
-		//if (gResources.mShaderPrograms["shadow"].Reload()) {
-		//	Renderer::Init();
-		//}
-		//gResources.mShaderPrograms["depth"].Reload();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+		//ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+		//ImGui::ShowDemoWindow();
+
+		ImGui::Begin("Debug");
+		static bool wireframe = false;
+		if (ImGui::Checkbox("Wireframe Mode", &wireframe))
+		{
+			if (wireframe)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode
+			else
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode (default)
+		}
+		ImGui::End();
+
+		ImGui::Begin("Scene Texture Viewer");
+		static const char* textureTypes[] = { "Default", "Depth" };
+		static int selectedItem = 0;
+		ImGui::Combo("Texture Type", &selectedItem, textureTypes, IM_ARRAYSIZE(textureTypes));
+
+		GLuint textureID = 0;
+		switch (selectedItem)
+		{
+		case 0:
+			textureID = renderData.mScreenColorTexture;
+			break;
+		case 1:
+			Renderer::RenderDepthToColorTexture(0);
+			textureID = renderData.mDepthDebugColorTexture;
+			break;
+		}
+
+		ImVec2 textureSize = ImVec2(1280.0f, 720.0f);
+		ImVec2 uv0 = ImVec2(0.0f, 1.0f); // Bottom-left
+		ImVec2 uv1 = ImVec2(1.0f, 0.0f); // Top-right
+		ImGui::Image((void*)(intptr_t)textureID, textureSize, uv0, uv1);
+
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		// for imgui docking feature
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
+			SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+			SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+		}
 
 		gInputManager.Update();
 
@@ -104,12 +159,29 @@ bool Game::initialize(const char* title, int width, int height, bool fullscreen)
 		SDL_Quit();
 		return false;
 	}
+	//-----------------------------------------------------------------------------
+	// ImGUI
+	//-----------------------------------------------------------------------------
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	// Setup Platform/Renderer backends
+	ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
+	ImGui_ImplOpenGL3_Init();
 
 	return true;
 }
 
 void Game::shutdown()
 {
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+
 	SDL_GL_DeleteContext(m_glContext);
 	SDL_DestroyWindow(m_window);
 	SDL_Quit();
@@ -125,6 +197,7 @@ void Game::processSDLEvent(SDL_Event& event)
 				int newWidth = event.window.data1;
 				int newHeight = event.window.data2;
 				glViewport(0, 0, newWidth, newHeight);
+				gEventManager.Fire<WindowResizeEvent>(newWidth, newHeight);
 			}
 			break;
 		}
@@ -170,6 +243,7 @@ void Game::loadResources() {
 	LoadShaderProgram("shadow", "Resources/Shaders/CSMPhong.vert", "Resources/Shaders/CSMPhong.frag");
 	LoadShaderProgram("shadowDepth", "Resources/Shaders/shadowMappingDepth.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
 	LoadShaderProgram("screen", "Resources/Shaders/screen.vert", "Resources/Shaders/screen.frag");
+	LoadShaderProgram("debugDepth", "Resources/Shaders/debugDepth.vert", "Resources/Shaders/debugDepth.frag");
 
 	//LoadShaderProgram("wind", "Resources/Shaders/Wind.vert", "Resources/Shaders/CSMPhong.frag");
 	//LoadShaderProgram("shadowDepthWind", "Resources/Shaders/ShadowDepthWind.vert", "Resources/Shaders/shadowMappingDepth.frag", "Resources/Shaders/shadowMappingDepth.geom");
@@ -183,8 +257,6 @@ void Game::loadResources() {
 	LoadTexture("Resources/Textures/wood.png", "wood");
 	LoadTexture("Resources/Textures/brickwall.jpg", "brick");
 }
-
-
 
 //LoadShaderProgram("CSMPhong", "Resources/Shaders/CSMPhong.vert", "Resources/Shaders/CSMPhong.frag");
 //LoadShaderProgram("ShadowDepth", "Resources/Shaders/ShadowDepth.vert", "Resources/Shaders/ShadowDepth.frag", "Resources/Shaders/ShadowDepth.geom");

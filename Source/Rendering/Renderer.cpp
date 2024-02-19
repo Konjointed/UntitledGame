@@ -4,6 +4,7 @@
 
 #include "Log/Logger.h"
 #include "Core/Resources.h"
+#include "Event/EventManager.h"
 #include "Rendering/Mesh.h"
 #include "Rendering/Shader.h"
 #include "Rendering/Texture.h"
@@ -14,56 +15,72 @@
 //time += 0.01f;
 //program.SetUniformFloat("time", time);
 
-// TODO: Create a file with util/helper functions to make he buffers n shit
 void Renderer::Init()
 {
+	gEventManager.Connect<WindowResizeEvent>(&Renderer::onWindowResize);
+
 	renderData.mShadowCascadeLevels = { gScene.camera.get()->GetFarPlane() / 50.0f, gScene.camera.get()->GetFarPlane() / 25.0f, gScene.camera.get()->GetFarPlane() / 10.0f, gScene.camera.get()->GetFarPlane() / 2.0f };
 	////-----------------------------------------------------------------------------
-	//// Configure light frame buffer
+	//// Configure light framebuffer
 	////-----------------------------------------------------------------------------
-	renderData.mLightFrameBuffer = CreateFrameBuffer(true);
+	renderData.mLightFBO = CreateFrameBuffer(true);
 
+	// TODO: Understand this (is this an attachment?)
 	renderData.mLightDepthMaps = CreateDepthTextureArray(renderData.mDepthMapResolution, renderData.mDepthMapResolution, renderData.mShadowCascadeLevels.size() + 1);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, renderData.mLightDepthMaps, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
-	ValidateBuffer(renderData.mLightFrameBuffer);
-	UnbindFramebuffer();
-	//-----------------------------------------------------------------------------
-	// Configure post-processing frame buffer
-	//-----------------------------------------------------------------------------
-	renderData.ppFrameBuffer = CreateFrameBuffer(true);
-
-	renderData.ppTextureColor = CreateTextureAttachment(1280, 720);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.ppTextureColor, 0); // Attach
-
-	renderData.ppRenderBufferDepth = CreateRenderBufferAttachment(1280, 720);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderData.ppRenderBufferDepth); // Attach
-
-	ValidateBuffer(renderData.ppFrameBuffer);
-	UnbindFramebuffer();
+	ValidateBuffer(renderData.mLightFBO);
+	BindDefaultFramebuffer();
 	////-----------------------------------------------------------------------------
-	//// Configure uniform buffer
+	//// Configure uniformbuffer
 	////-----------------------------------------------------------------------------
-	glGenBuffers(1, &renderData.mMatricesUniformBuffer);
-	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUniformBuffer);
+	// TODO: Understand this
+	glGenBuffers(1, &renderData.mMatricesUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4x4) * 16, nullptr, GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, renderData.mMatricesUniformBuffer);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, renderData.mMatricesUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Renderer::Render(float timestep) {
-	shadowPass();
+void Renderer::Resize(int windowWidth, int windowHeight) {
+	//-----------------------------------------------------------------------------
+	// Configure post-processing framebuffer
+	//-----------------------------------------------------------------------------
+	renderData.mScreenFBO = CreateFrameBuffer(true);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, renderData.ppFrameBuffer);
+	renderData.mScreenColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.mScreenColorTexture, 0);
+
+	renderData.mScreenRBO = CreateRenderBufferAttachment(windowWidth, windowHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderData.mScreenRBO);
+
+	ValidateBuffer(renderData.mScreenFBO);
+	BindDefaultFramebuffer();
+	//-----------------------------------------------------------------------------
+	// Configure debug depth framebuffer
+	//-----------------------------------------------------------------------------
+	renderData.mDepthDebugFBO = CreateFrameBuffer(true);
+
+	renderData.mDepthDebugColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.mDepthDebugColorTexture, 0);
+
+	ValidateBuffer(renderData.mDepthDebugFBO);
+	BindDefaultFramebuffer();
+}
+
+void Renderer::Render(float timestep) {
+	shadowPass(); // Generate shadow maps
+
+	BindFramebuffer(renderData.mScreenFBO);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	lightingPass();
 
 	// Bind the default framebuffer and draw the screen quad with post-processing
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	BindDefaultFramebuffer();
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -74,12 +91,40 @@ void Renderer::Render(float timestep) {
 
 	// Bind the texture of the offscreen framebuffer
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, renderData.ppTextureColor);
+	glBindTexture(GL_TEXTURE_2D, renderData.mScreenColorTexture);
 
 	// Render the quad
 	renderScreenQuad();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
+
 	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::RenderDepthToColorTexture(int layer)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, renderData.mDepthDebugFBO);
+	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	ShaderProgram& debugShader = gResources.mShaderPrograms.at("debugDepth");
+	glUseProgram(debugShader.mId);
+
+	debugShader.SetUniformInt("layer", layer);
+
+	glActiveTexture(GL_TEXTURE0); // Use texture unit 0
+	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
+	debugShader.SetUniformInt("shadowMap", 0);
+
+	renderScreenQuad();
+
+	// Reset OpenGL state
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Bind back to default framebuffer
+	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight); // Reset viewport to original dimensions
+	glEnable(GL_DEPTH_TEST); // Ensure depth test is enabled for subsequent rendering
+	glActiveTexture(GL_TEXTURE0); // Reset to default texture unit if necessary
+	// Additional state resets can be added here as needed
 }
 
 void Renderer::shadowPass()
@@ -88,7 +133,7 @@ void Renderer::shadowPass()
 	// 0. Uniform buffer setup
 	//-----------------------------------------------------------------------------
 	const auto lightMatrices = getLightSpaceMatrices();
-	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUniformBuffer);
+	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUBO);
 	for (size_t i = 0; i < lightMatrices.size(); ++i)
 	{
 		glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(glm::mat4x4), sizeof(glm::mat4x4), &lightMatrices[i]);
@@ -100,7 +145,7 @@ void Renderer::shadowPass()
 	ShaderProgram& program = gResources.mShaderPrograms.at("shadowDepth");
 	glUseProgram(program.mId);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, renderData.mLightFrameBuffer);
+	BindFramebuffer(renderData.mLightFBO);
 	glViewport(0, 0, renderData.mDepthMapResolution, renderData.mDepthMapResolution);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glCullFace(GL_FRONT);  // peter panning
@@ -108,11 +153,11 @@ void Renderer::shadowPass()
 	renderScene(program);
 
 	glCullFace(GL_BACK);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	BindDefaultFramebuffer();
 	//-----------------------------------------------------------------------------
 	// Reset viewport
 	//-----------------------------------------------------------------------------
-	glViewport(0, 0, 1280, 720);
+	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -121,7 +166,7 @@ void Renderer::lightingPass()
 	//-----------------------------------------------------------------------------
 	// 2. Render scene as normal using the generated depth/shadow map  
 	//-----------------------------------------------------------------------------
-	glViewport(0, 0, 1280, 720);
+	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	ShaderProgram& program = gResources.mShaderPrograms.at("shadow");
 	glUseProgram(program.mId);
@@ -176,6 +221,12 @@ void Renderer::renderScene(ShaderProgram program)
 			glBindVertexArray(0);
 		}
 	}
+}
+
+void Renderer::onWindowResize(const WindowResizeEvent& event) {
+	renderData.mWindowWidth = event.x;
+	renderData.mWindowHeight = event.y;
+	Resize(event.x, event.y);
 }
 
 unsigned int quadVAO = 0;
@@ -234,7 +285,7 @@ std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const 
 
 glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
 {
-	const auto projection = glm::perspective(glm::radians(70.0f), (float)1280 / (float)720, nearPlane, farPlane);
+	const auto projection = glm::perspective(glm::radians(70.0f), (float)renderData.mWindowWidth / (float)renderData.mWindowHeight, nearPlane, farPlane);
 	const auto corners = getFrustumCornersWorldSpace(projection, gScene.camera.get()->GetView());
 
 	glm::vec3 center = glm::vec3(0, 0, 0);

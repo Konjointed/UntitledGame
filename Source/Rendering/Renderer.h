@@ -34,25 +34,38 @@ enum DepthResolution {
 	EXTREME = 8192
 };
 
+struct WindowResizeEvent {
+	int x, y;
+};
+
 struct RendererData {
+	int mWindowWidth = 1280;
+	int mWindowHeight = 720;
+
 	const glm::vec3 mLightDirection = gScene.lightDirection;
 	const unsigned int mDepthMapResolution = DepthResolution::ULTRA;
-	unsigned int mLightFrameBuffer;
-	unsigned int mLightDepthMaps;
-	unsigned int mMatricesUniformBuffer;
+	unsigned int mLightFBO; // -> mShadowMapFBO
+	unsigned int mLightDepthMaps; // -> mShadowMapTexture
+	unsigned int mMatricesUBO;
 	std::vector<float> mShadowCascadeLevels;
 
-	// Post-processing framebuffer and textures
-	unsigned int ppFrameBuffer; // Post-processing Framebuffer
-	unsigned int ppTextureColor; // Texture attachment for color
-	unsigned int ppRenderBufferDepth;
+	unsigned int mScreenFBO;
+	unsigned int mScreenColorTexture;
+	unsigned int mScreenRBO;
+
+	unsigned int mDepthDebugFBO;
+	unsigned int mDepthDebugColorTexture;
+
 };
 
 class Renderer {
 public:
 	static void Init();
+	static void Resize(int windowWidth, int windowHeight);
 	static void Render(float timestep);
+	static void RenderDepthToColorTexture(int layer);
 private:
+	static void onWindowResize(const WindowResizeEvent& event);
 	static void renderScene(ShaderProgram program);
 	static void shadowPass();
 	static void lightingPass();
@@ -67,26 +80,3 @@ std::vector<glm::mat4> getLightSpaceMatrices();
 extern RendererData renderData;
 
 #endif 
-
-
-/*
-Up until now I've been using super basic shaders or things I've learned from learnopengl.com and I'd like to combine everything, but I don't fully understand how.
-I thought it was as simple as apply X shader and set uniforms, apply Y shader and set uniforms, etc and you're good to go, but that doesn't seem to be the case.
-
-void Renderer::Render() {
-	shadowPass();
-	lightingPass();
-}
-
-void Renderer::shadowPass() {
-	// Uniform buffer setup
-	// Render depth of scene
-	// Render scene
-}
-
-void Renderer::lightingPass() {
-	// Render scene with generated depth map
-	// Set uniforms
-	// Render scene
-}
-*/

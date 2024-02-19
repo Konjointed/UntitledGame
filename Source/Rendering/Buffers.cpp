@@ -4,16 +4,16 @@
 
 #include "Log/Logger.h"
 
-unsigned int CreateFrameBuffer(bool enable) {
+unsigned int CreateFrameBuffer(bool bindOnCreate) {
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
-    if (enable) {
+    if (bindOnCreate) {
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     }
     return framebuffer;
 }
 
-unsigned int CreateTextureAttachment(int width, int height) {
+unsigned int CreateColorTextureAttachment(int width, int height) {
     unsigned int texture;
     glGenTextures(1, &texture);
 
@@ -41,6 +41,26 @@ unsigned int CreateDepthTextureAttachment(int width, int height) {
 
     return texture;
 }
+
+unsigned int CreateDepthStencilTextureAttachment(int width, int height) {
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Use GL_DEPTH24_STENCIL8 as internal format to store both depth and stencil data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+    // Set texture parameters as needed (e.g., filtering methods)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return texture;
+}
+
 
 unsigned int CreateRenderBufferAttachment(int width, int height) {
     unsigned int rbo;

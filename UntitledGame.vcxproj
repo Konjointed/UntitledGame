@@ -149,6 +149,13 @@
     <ClCompile Include="Source\Scene\CameraController.cpp" />
     <ClCompile Include="Source\Scene\GameObject.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_demo.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_tables.cpp" />
+    <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Core\Game.h" />
@@ -167,16 +174,24 @@
     <ClInclude Include="Source\Scene\CameraController.h" />
     <ClInclude Include="Source\Scene\GameObject.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
+    <ClInclude Include="ThirdParty\imgui\imconfig.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui_impl_sdl2.h" />
+    <ClInclude Include="ThirdParty\imgui\imgui_internal.h" />
+    <ClInclude Include="ThirdParty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="ThirdParty\imgui\imstb_textedit.h" />
+    <ClInclude Include="ThirdParty\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\DeferredLighting.frag" />
-    <None Include="Resources\Shaders\GBuffer.frag" />
-    <None Include="Resources\Shaders\GBuffer.vert" />
+    <None Include="Resources\Shaders\debugDepth.frag" />
     <None Include="Resources\Shaders\screen.frag" />
     <None Include="Resources\Shaders\screen.vert" />
     <None Include="Resources\Shaders\temp\Common.vert" />
     <None Include="Resources\Shaders\CSMPhong.frag" />
     <None Include="Resources\Shaders\CSMPhong.vert" />
+    <None Include="Resources\Shaders\debugDepth.vert" />
     <None Include="Resources\Shaders\temp\ShadowDepthWind.vert" />
     <None Include="Resources\Shaders\shadowMappingDepth.frag" />
     <None Include="Resources\Shaders\shadowMappingDepth.geom" />
