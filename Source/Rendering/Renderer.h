@@ -27,53 +27,53 @@ Step 5: Apply the shader associated with the object
 struct ShaderProgram;
 struct WindowResizeEvent;
 
-enum DepthResolution {
-	LOW = 512,
-	MEDIUM = 1024,
-	HIGH = 2048,
-	ULTRA = 4096,
-	EXTREME = 8192
-};
+namespace Renderer {
+	enum DepthResolution {
+		LOW = 512,
+		MEDIUM = 1024,
+		HIGH = 2048,
+		ULTRA = 4096,
+		EXTREME = 8192
+	};
 
-struct RendererData {
-	int mWindowWidth = 1280;
-	int mWindowHeight = 720;
+	struct RendererData {
+		int mWindowWidth = 1280;
+		int mWindowHeight = 720;
 
-	const glm::vec3 mLightDirection = gScene.lightDirection;
-	const unsigned int mDepthMapResolution = DepthResolution::ULTRA;
-	unsigned int mLightFBO; // -> mShadowMapFBO
-	unsigned int mLightDepthMaps; // -> mShadowMapTexture
-	unsigned int mMatricesUBO;
-	std::vector<float> mShadowCascadeLevels;
+		const glm::vec3 mLightDirection = gScene.lightDirection;
+		const unsigned int mDepthMapResolution = DepthResolution::ULTRA;
+		unsigned int mLightFBO; // -> mShadowMapFBO
+		unsigned int mLightDepthMaps; // -> mShadowMapTexture
+		unsigned int mMatricesUBO;
+		std::vector<float> mShadowCascadeLevels;
 
-	unsigned int mScreenFBO;
-	unsigned int mScreenColorTexture;
-	unsigned int mScreenRBO;
+		unsigned int mScreenFBO;
+		unsigned int mScreenColorTexture;
+		unsigned int mScreenRBO;
 
-	unsigned int mDepthDebugFBO;
-	unsigned int mDepthDebugColorTexture;
+		unsigned int mDepthDebugFBO;
+		unsigned int mDepthDebugColorTexture;
+	};
 
-};
+	void init();
+	void resize(int windowWidth, int windowHeight);
+	void render();
 
-class Renderer {
-public:
-	static void Init();
-	static void Resize(int windowWidth, int windowHeight);
-	static void Render(float timestep);
-	static void RenderDepthToColorTexture(int layer);
-private:
-	static void onWindowResize(const WindowResizeEvent& event);
-	static void renderScene(ShaderProgram program);
-	static void shadowPass();
-	static void lightingPass();
-};
+	void renderScene(ShaderProgram program);
+	void shadowPass();
+	void lightingPass();
 
-void renderScreenQuad();
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview);
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
-glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane);
-std::vector<glm::mat4> getLightSpaceMatrices();
+	void renderScreenQuad();
+	std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview);
+	std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
+	glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane);
+	std::vector<glm::mat4> getLightSpaceMatrices();
 
-extern RendererData renderData;
+	void renderDepthToColorTexture(int layer);
+
+	void onWindowResize(const WindowResizeEvent& event);
+
+	extern RendererData gRenderData;
+}
 
 #endif 

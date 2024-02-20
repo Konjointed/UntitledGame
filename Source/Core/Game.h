@@ -16,9 +16,9 @@ private:
 	void processSDLEvent(SDL_Event& event);
 	void loadResources();
 private:
-	bool m_quit = false;
-	SDL_Window* m_window = nullptr;
-	SDL_GLContext m_glContext = nullptr;
+	bool mQuit = false;
+	SDL_Window* mWindow = nullptr;
+	SDL_GLContext mGlContext;
 };
 
 extern Game gGame;

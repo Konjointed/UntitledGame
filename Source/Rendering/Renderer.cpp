@@ -15,65 +15,67 @@
 //time += 0.01f;
 //program.SetUniformFloat("time", time);
 
-void Renderer::Init()
+Renderer::RendererData Renderer::gRenderData;
+
+void Renderer::init()
 {
 	gEventManager.Connect<WindowResizeEvent>(&Renderer::onWindowResize);
 
-	renderData.mShadowCascadeLevels = { gScene.camera.get()->GetFarPlane() / 50.0f, gScene.camera.get()->GetFarPlane() / 25.0f, gScene.camera.get()->GetFarPlane() / 10.0f, gScene.camera.get()->GetFarPlane() / 2.0f };
+	gRenderData.mShadowCascadeLevels = { gScene.camera.get()->GetFarPlane() / 50.0f, gScene.camera.get()->GetFarPlane() / 25.0f, gScene.camera.get()->GetFarPlane() / 10.0f, gScene.camera.get()->GetFarPlane() / 2.0f };
 	////-----------------------------------------------------------------------------
 	//// Configure light framebuffer
 	////-----------------------------------------------------------------------------
-	renderData.mLightFBO = CreateFrameBuffer(true);
+	gRenderData.mLightFBO = CreateFrameBuffer(true);
 
 	// TODO: Understand this (is this an attachment?)
-	renderData.mLightDepthMaps = CreateDepthTextureArray(renderData.mDepthMapResolution, renderData.mDepthMapResolution, renderData.mShadowCascadeLevels.size() + 1);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, renderData.mLightDepthMaps, 0);
+	gRenderData.mLightDepthMaps = CreateDepthTextureArray(gRenderData.mDepthMapResolution, gRenderData.mDepthMapResolution, gRenderData.mShadowCascadeLevels.size() + 1);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gRenderData.mLightDepthMaps, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
-	ValidateBuffer(renderData.mLightFBO);
+	ValidateBuffer(gRenderData.mLightFBO);
 	BindDefaultFramebuffer();
 	////-----------------------------------------------------------------------------
 	//// Configure uniformbuffer
 	////-----------------------------------------------------------------------------
 	// TODO: Understand this
-	glGenBuffers(1, &renderData.mMatricesUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUBO);
+	glGenBuffers(1, &gRenderData.mMatricesUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, gRenderData.mMatricesUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4x4) * 16, nullptr, GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, renderData.mMatricesUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, gRenderData.mMatricesUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Renderer::Resize(int windowWidth, int windowHeight) {
+void Renderer::resize(int windowWidth, int windowHeight) {
 	//-----------------------------------------------------------------------------
 	// Configure post-processing framebuffer
 	//-----------------------------------------------------------------------------
-	renderData.mScreenFBO = CreateFrameBuffer(true);
+	gRenderData.mScreenFBO = CreateFrameBuffer(true);
 
-	renderData.mScreenColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.mScreenColorTexture, 0);
+	gRenderData.mScreenColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gRenderData.mScreenColorTexture, 0);
 
-	renderData.mScreenRBO = CreateRenderBufferAttachment(windowWidth, windowHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderData.mScreenRBO);
+	gRenderData.mScreenRBO = CreateRenderBufferAttachment(windowWidth, windowHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRenderData.mScreenRBO);
 
-	ValidateBuffer(renderData.mScreenFBO);
+	ValidateBuffer(gRenderData.mScreenFBO);
 	BindDefaultFramebuffer();
 	//-----------------------------------------------------------------------------
 	// Configure debug depth framebuffer
 	//-----------------------------------------------------------------------------
-	renderData.mDepthDebugFBO = CreateFrameBuffer(true);
+	gRenderData.mDepthDebugFBO = CreateFrameBuffer(true);
 
-	renderData.mDepthDebugColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderData.mDepthDebugColorTexture, 0);
+	gRenderData.mDepthDebugColorTexture = CreateColorTextureAttachment(windowWidth, windowHeight);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gRenderData.mDepthDebugColorTexture, 0);
 
-	ValidateBuffer(renderData.mDepthDebugFBO);
+	ValidateBuffer(gRenderData.mDepthDebugFBO);
 	BindDefaultFramebuffer();
 }
 
-void Renderer::Render(float timestep) {
+void Renderer::render() {
 	shadowPass(); // Generate shadow maps
 
-	BindFramebuffer(renderData.mScreenFBO);
+	BindFramebuffer(gRenderData.mScreenFBO);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -91,21 +93,21 @@ void Renderer::Render(float timestep) {
 
 	// Bind the texture of the offscreen framebuffer
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, renderData.mScreenColorTexture);
+	glBindTexture(GL_TEXTURE_2D, gRenderData.mScreenColorTexture);
 
 	// Render the quad
 	renderScreenQuad();
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, gRenderData.mLightDepthMaps);
 
 	glEnable(GL_DEPTH_TEST);
 }
 
-void Renderer::RenderDepthToColorTexture(int layer)
+void Renderer::renderDepthToColorTexture(int layer)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, renderData.mDepthDebugFBO);
-	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
+	glBindFramebuffer(GL_FRAMEBUFFER, gRenderData.mDepthDebugFBO);
+	glViewport(0, 0, gRenderData.mWindowWidth, gRenderData.mWindowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	ShaderProgram& debugShader = gResources.mShaderPrograms.at("debugDepth");
@@ -114,14 +116,14 @@ void Renderer::RenderDepthToColorTexture(int layer)
 	debugShader.SetUniformInt("layer", layer);
 
 	glActiveTexture(GL_TEXTURE0); // Use texture unit 0
-	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, gRenderData.mLightDepthMaps);
 	debugShader.SetUniformInt("shadowMap", 0);
 
 	renderScreenQuad();
 
 	// Reset OpenGL state
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Bind back to default framebuffer
-	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight); // Reset viewport to original dimensions
+	glViewport(0, 0, gRenderData.mWindowWidth, gRenderData.mWindowHeight); // Reset viewport to original dimensions
 	glEnable(GL_DEPTH_TEST); // Ensure depth test is enabled for subsequent rendering
 	glActiveTexture(GL_TEXTURE0); // Reset to default texture unit if necessary
 	// Additional state resets can be added here as needed
@@ -133,7 +135,7 @@ void Renderer::shadowPass()
 	// 0. Uniform buffer setup
 	//-----------------------------------------------------------------------------
 	const auto lightMatrices = getLightSpaceMatrices();
-	glBindBuffer(GL_UNIFORM_BUFFER, renderData.mMatricesUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, gRenderData.mMatricesUBO);
 	for (size_t i = 0; i < lightMatrices.size(); ++i)
 	{
 		glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(glm::mat4x4), sizeof(glm::mat4x4), &lightMatrices[i]);
@@ -145,8 +147,8 @@ void Renderer::shadowPass()
 	ShaderProgram& program = gResources.mShaderPrograms.at("shadowDepth");
 	glUseProgram(program.mId);
 
-	BindFramebuffer(renderData.mLightFBO);
-	glViewport(0, 0, renderData.mDepthMapResolution, renderData.mDepthMapResolution);
+	BindFramebuffer(gRenderData.mLightFBO);
+	glViewport(0, 0, gRenderData.mDepthMapResolution, gRenderData.mDepthMapResolution);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glCullFace(GL_FRONT);  // peter panning
 
@@ -157,7 +159,7 @@ void Renderer::shadowPass()
 	//-----------------------------------------------------------------------------
 	// Reset viewport
 	//-----------------------------------------------------------------------------
-	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
+	glViewport(0, 0, gRenderData.mWindowWidth, gRenderData.mWindowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -166,7 +168,7 @@ void Renderer::lightingPass()
 	//-----------------------------------------------------------------------------
 	// 2. Render scene as normal using the generated depth/shadow map  
 	//-----------------------------------------------------------------------------
-	glViewport(0, 0, renderData.mWindowWidth, renderData.mWindowHeight);
+	glViewport(0, 0, gRenderData.mWindowWidth, gRenderData.mWindowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	ShaderProgram& program = gResources.mShaderPrograms.at("shadow");
 	glUseProgram(program.mId);
@@ -178,15 +180,15 @@ void Renderer::lightingPass()
 	// Set light uniforms
 	//-----------------------------------------------------------------------------
 	program.SetUniform("viewPos", gScene.camera.get()->GetPosition()); 
-	program.SetUniform("lightDir", renderData.mLightDirection);
+	program.SetUniform("lightDir", gRenderData.mLightDirection);
 	program.SetUniformFloat("farPlane", gScene.camera.get()->GetFarPlane());
-	program.SetUniformInt("cascadeCount", renderData.mShadowCascadeLevels.size());
-	for (size_t i = 0; i < renderData.mShadowCascadeLevels.size(); ++i)
+	program.SetUniformInt("cascadeCount", gRenderData.mShadowCascadeLevels.size());
+	for (size_t i = 0; i < gRenderData.mShadowCascadeLevels.size(); ++i)
 	{
-		program.SetUniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", renderData.mShadowCascadeLevels[i]);
+		program.SetUniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", gRenderData.mShadowCascadeLevels[i]);
 	}
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.mLightDepthMaps);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, gRenderData.mLightDepthMaps);
 
 	renderScene(program);
 }
@@ -224,14 +226,14 @@ void Renderer::renderScene(ShaderProgram program)
 }
 
 void Renderer::onWindowResize(const WindowResizeEvent& event) {
-	renderData.mWindowWidth = event.x;
-	renderData.mWindowHeight = event.y;
-	Resize(event.x, event.y);
+	gRenderData.mWindowWidth = event.x;
+	gRenderData.mWindowHeight = event.y;
+	resize(event.x, event.y);
 }
 
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
-void renderScreenQuad() {
+void Renderer::renderScreenQuad() {
 	if (quadVAO == 0)
 	{
 		float quadVertices[] = {
@@ -258,7 +260,7 @@ void renderScreenQuad() {
 	glBindVertexArray(0);
 }
 
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)
+std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& projview)
 {
 	const auto inv = glm::inverse(projview);
 
@@ -278,14 +280,14 @@ std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)
 	return frustumCorners;
 }
 
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view)
+std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view)
 {
 	return getFrustumCornersWorldSpace(proj * view);
 }
 
-glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
+glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane)
 {
-	const auto projection = glm::perspective(glm::radians(70.0f), (float)renderData.mWindowWidth / (float)renderData.mWindowHeight, nearPlane, farPlane);
+	const auto projection = glm::perspective(glm::radians(70.0f), (float)gRenderData.mWindowWidth / (float)gRenderData.mWindowHeight, nearPlane, farPlane);
 	const auto corners = getFrustumCornersWorldSpace(projection, gScene.camera.get()->GetView());
 
 	glm::vec3 center = glm::vec3(0, 0, 0);
@@ -295,7 +297,7 @@ glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
 	}
 	center /= corners.size();
 
-	const auto lightView = glm::lookAt(center + renderData.mLightDirection, center, glm::vec3(0.0f, 1.0f, 0.0f));
+	const auto lightView = glm::lookAt(center + gRenderData.mLightDirection, center, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	float minX = std::numeric_limits<float>::max();
 	float maxX = std::numeric_limits<float>::lowest();
@@ -337,22 +339,22 @@ glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
 	return lightProjection * lightView;
 }
 
-std::vector<glm::mat4> getLightSpaceMatrices()
+std::vector<glm::mat4> Renderer::getLightSpaceMatrices()
 {
 	std::vector<glm::mat4> ret;
-	for (size_t i = 0; i < renderData.mShadowCascadeLevels.size() + 1; ++i)
+	for (size_t i = 0; i < gRenderData.mShadowCascadeLevels.size() + 1; ++i)
 	{
 		if (i == 0)
 		{
-			ret.push_back(getLightSpaceMatrix(gScene.camera.get()->GetNearPlane(), renderData.mShadowCascadeLevels[i]));
+			ret.push_back(getLightSpaceMatrix(gScene.camera.get()->GetNearPlane(), gRenderData.mShadowCascadeLevels[i]));
 		}
-		else if (i < renderData.mShadowCascadeLevels.size())
+		else if (i < gRenderData.mShadowCascadeLevels.size())
 		{
-			ret.push_back(getLightSpaceMatrix(renderData.mShadowCascadeLevels[i - 1], renderData.mShadowCascadeLevels[i]));
+			ret.push_back(getLightSpaceMatrix(gRenderData.mShadowCascadeLevels[i - 1], gRenderData.mShadowCascadeLevels[i]));
 		}
 		else
 		{
-			ret.push_back(getLightSpaceMatrix(renderData.mShadowCascadeLevels[i - 1], gScene.camera.get()->GetFarPlane()));
+			ret.push_back(getLightSpaceMatrix(gRenderData.mShadowCascadeLevels[i - 1], gScene.camera.get()->GetFarPlane()));
 		}
 	}
 	return ret;

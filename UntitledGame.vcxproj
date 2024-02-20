@@ -140,6 +140,7 @@
     <ClCompile Include="Source\Core\Game.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Rendering\Buffers.cpp" />
+    <ClCompile Include="Source\Rendering\GUI.cpp" />
     <ClCompile Include="Source\Rendering\Mesh.cpp" />
     <ClCompile Include="Source\Rendering\Renderer.cpp" />
     <ClCompile Include="Source\Rendering\Shader.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="Source\Input\InputManager.h" />
     <ClInclude Include="Source\Log\Logger.h" />
     <ClInclude Include="Source\Rendering\Buffers.h" />
+    <ClInclude Include="Source\Rendering\GUI.h" />
     <ClInclude Include="Source\Rendering\Material.h" />
     <ClInclude Include="Source\Rendering\Mesh.h" />
     <ClInclude Include="Source\Rendering\Renderer.h" />
